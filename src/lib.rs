@@ -1,6 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
+use js_sys::{ Math };
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -49,6 +50,27 @@ impl Universe {
     }
 }
 
+fn init_with_spaceship(i: u32, width: u32) -> Cell {
+    if i >= width + 2 && i <= width + 3 {
+        Cell::Alive
+    } else if i >= (width * 2) && i <= (width * 2) + 1 {
+        Cell::Alive
+    } else if i >= (width * 2) + 3 && i <= (width * 2) + 4 {
+        Cell::Alive
+    } else if i >= (width * 3) && i <= (width * 3) + 3 {
+        Cell::Alive
+    } else if i >= (width * 4) + 1 && i <= (width * 4) + 2 {
+        Cell::Alive
+    } else {
+        Cell::Dead
+    }
+}
+
+fn init_random() -> Cell {
+    if Math::random() > 0.5 { return Cell::Alive; }
+    Cell::Dead
+}
+
 /// Public methods, exported to JavaScript.
 #[wasm_bindgen]
 impl Universe {
@@ -91,13 +113,7 @@ impl Universe {
         let height = 64;
 
         let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Alive
-                } else {
-                    Cell::Dead
-                }
-            })
+            .map(|_| init_random())
             .collect();
 
         Universe {
