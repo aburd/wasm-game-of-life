@@ -1,7 +1,10 @@
 mod utils;
+#[macro_use]
+mod log;
 
 use wasm_bindgen::prelude::*;
 use js_sys::{ Math };
+extern crate web_sys;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -20,11 +23,25 @@ pub enum Cell {
     Alive = 1,
 }
 
+impl Cell {
+    fn toggle(&mut self) {
+        *self = match *self {
+            Cell::Dead => Cell::Alive,
+            Cell::Alive => Cell::Dead,
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub struct Universe {
     width: u32,
     height: u32,
+    old_cells: Vec<Cell>,
     cells: Vec<Cell>,
+}
+
+fn now() -> f64 {
+    web_sys::window().expect("window").performance().expect("performance").now()
 }
 
 impl Universe {
@@ -104,13 +121,16 @@ impl Universe {
             }
         }
 
+        self.old_cells = self.cells.clone();
         self.cells = next;
     }
 
     pub fn new() -> Universe {
+        log!("{}", now());
+        log!("Hello");
         utils::set_panic_hook();
-        let width = 64;
-        let height = 64;
+        let width = 512;
+        let height = 512;
 
         let cells = (0..width * height)
             .map(|_| init_random())
@@ -119,6 +139,7 @@ impl Universe {
         Universe {
             width,
             height,
+            old_cells: vec![],
             cells,
         }
     }
@@ -134,9 +155,41 @@ impl Universe {
     pub fn cells(&self) -> *const Cell {
         self.cells.as_ptr()
     }
+    
+    pub fn old_cells(&self) -> *const Cell {
+        self.old_cells.as_ptr()
+    }
 
     pub fn render(&self) -> String {
         self.to_string()
+    }
+
+    pub fn set_width(&mut self, width: u32) {
+        self.width = width;
+        self.cells = (0..width * self.height).map(|_| Cell::Dead).collect();
+    }
+    
+    pub fn set_height(&mut self, height: u32) {
+        self.height = height;
+        self.cells = (0..self.width * height).map(|_| Cell::Dead).collect();
+    }
+
+    pub fn toggle_cell(&mut self, row: u32, col: u32) {
+        let idx = self.get_index(row, col);
+        self.cells[idx].toggle();
+    }
+}
+
+impl Universe {
+    pub fn get_cells(&self) -> &[Cell] {
+        &self.cells
+    }
+
+    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+        for (row, col) in cells.iter().cloned() {
+            let idx = self.get_index(row, col);
+            self.cells[idx] = Cell::Alive;
+        }
     }
 }
 
